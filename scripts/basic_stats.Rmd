@@ -1,12 +1,20 @@
 ---
 title: "Basic_Statistics"
 output: html_document
-date: "2024-07-30"
+date: "2025-08-07"
 ---
 
 ```{r setup, include=FALSE}
 if (!require('tidyverse')) install.packages('tidyverse')
 if (!require('ggplot2')) install.packages('ggplot2')
+if (!require('pwr')) install.packages('pwr')
+if (!require('car')) install.packages('car')
+if (!require('MASS')) install.packages('MASS')
+if (!require('lmtest')) install.packages('lmtest')
+if (!require('tseries')) install.packages('tseries')
+if (!require('ggfortify')) install.packages('ggfortify')
+if (!require('janitor')) install.packages('janitor')
+if(!require('googlesheets4')) install.packages("googlesheets4")
 
 library(tidyverse)
 library(ggplot2)
@@ -16,6 +24,9 @@ library(MASS)
 library(lmtest)
 library(tseries)
 library(ggfortify)
+library(janitor)
+library(googlesheets4)
+library(reshape2)
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 getwd()
@@ -24,7 +35,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 ```{r The Lady Tasting Tea}
 
-# Create vector of 0-4 sucesses
+# Create vector of 0-4 successes
 x_dhyper <- seq(0, 4, by = 1)
 
 # Apply dhyper function
@@ -33,7 +44,6 @@ x_dhyper <- seq(0, 4, by = 1)
 # k = number of "draws" (choice of teacups prepared milk-first)
 
 y_dhyper <- dhyper(x_dhyper, m = 4, n = 4, k = 4)   
-
 # Make a dataframe
 hg_df <- tibble(x_dhyper,y_dhyper)
 hg_df
@@ -69,6 +79,54 @@ hypergeometric <- hg_df |>
   theme_classic()
 hypergeometric
 ```
+```{r lady tasting tea interactive}
+#read data from Google Drive
+ltt_df <-
+  read_sheet("https://docs.google.com/spreadsheets/d/13eTn8XvuzIK0_b2edjHEb81kW9lBqPuayyaZ9lFBuZU/edit?usp=sharing", col_names = TRUE) %>%
+  clean_names()
+
+#total successes in 1st four trials
+df <- ltt_df |>
+  rowwise() |>
+  mutate(successes4 =  sum(c_across(trial_1:trial_4), na.rm = T),
+         successes8 =  sum(c_across(trial_1:trial_8), na.rm = T)
+         )
+
+
+succ_counts <- df |>
+  count(successes4) 
+
+obs <- nrow(df)
+
+succ_freq <- succ_counts |>
+  mutate(freq1 = n/obs)
+
+
+jdf <- left_join(hg_df, succ_freq, join_by(x_dhyper == successes4)) |>
+  dplyr::select(-n) |>
+  melt(id.vars = 'x_dhyper')
+
+new_hyper <- jdf |>
+  ggplot(aes(x = x_dhyper, y = value, fill = variable)
+  ) +
+  geom_bar(stat = 'identity', position = 'dodge') +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red") +
+  labs(
+    title = "Hypergeometric Distribution of 4 trials",
+    subtitle = "Dashed line indicates 0.05 probability level"
+  ) +
+  xlab("Successes") +
+  ylab("Probability") +
+  theme_classic()
+new_hyper
+
+
+
+
+
+
+```
+
 ```{r Normal distribution and t-test}
 #Create a sequence of 100 equally spaced numbers between -4 and 4
 x <- seq(-4, 4, length=100)
