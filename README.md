@@ -1,4 +1,7 @@
-# 2024_R_Data_Analysis_Seminar
+# 2025_R_Data_Analysis_Seminar
+
+## Location and Time:  PSB3015, Thursdays 11a-12p
+
 
 ---
 ## Tentative Course Schedule
