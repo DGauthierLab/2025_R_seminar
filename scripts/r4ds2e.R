@@ -23,6 +23,7 @@ if (!require('readxl')) install.packages('readxl')
 if (!require('ggthemes')) install.packages('ggthemes')
 if (!require('readxl')) install.packages('readxl')
 if (!require('babynames')) install.packages('babynames')
+if (!require('words')) install.packages('words')
 
 #library loadings
 library(tidyverse)
@@ -32,6 +33,8 @@ library(nycflights13)
 library(readxl)
 library(ggthemes)
 library(babynames)
+library(words)
+
 
 #setting a working directory
 #following command assumes you have rstudioapi installed/loaded and sets working directory to script directory
@@ -80,6 +83,9 @@ round(3.1415, digits = 2) #two arguments, separated by comma
 pi rounded <- round(3.1415, digits = 2)
 pi_rounded <- round(3.1415, digits = 2)
 
+
+####Challenge 1####
+#Start a new script in your personal branch.  It should include a setup block and a code block.  Make it do something in the code block.  
 ####Section 7: Data import####
 #note the path here.  your working directory should be scripts, so your data is up one (..), then down one to data
 #The (..) convention means "up one directory" and is a relative path
@@ -111,52 +117,57 @@ penguins_Dream <- read_excel("../data/penguins.xlsx",
                                            "numeric", "text", "numeric"))
 View(penguins_Dream)
 
+####Challenge 2####
+#Working within your own branch, place copies of your own data files in the /data folder.  
+#Add a code block that imports these data files into the Rstudio environment.
 ####Section 19: Joins####
 
 #data frames for joining
 #where do these data sets come from?
+flights
 airlines
-airports
-planes 
-weather
 
-#checking whether primary keys for each table are good (uniquely identify each record)
-#This is the first time you've seen a pipe (|>) in this class
-#also functions count() and filter()
-#these are all tidyverse functions, which we'll get to next week in more detail
-
-planes |> 
-  count(tailnum) |> 
-  filter(n > 1)
-
-#compare with the unpiped version:
-
-df <- count(planes, tailnum)
-  filter(df, n > 1)
-
-weather |> 
-  count(time_hour, origin) |> 
-  filter(n > 1)
-
-#also should examine your keys for missing values 
-planes |> 
-  filter(is.na(tailnum))
-
-weather |> 
-  filter(is.na(time_hour) | is.na(origin))
-
-#mutating joins
-#introducing select() here
+#first, lets make flights a little more convenient for viewing
+#introducing both the pipe |> and select() here
 
 flights2 <- flights |> 
   select(year, time_hour, origin, dest, tailnum, carrier)
 flights2
 
+#these two data sets are going to be joined on the common variable ("key") of <carrier>
+#the goal here is to append the flights2 dataframe with the full name of each carrier, based on the abbreviation
+
+
+#checking whether primary key for the joined table uniquely identifies each record
+#functions count() and filter()
+#these are tidyverse functions, which we'll get to next week in more detail
+
+airlines |> 
+  count(carrier) |> 
+  filter(n > 1)
+
+#compare above with the unpiped version:
+df <- count(airlines, carrier)
+  filter(df, n > 1)
+
+#also should examine your keys for missing values 
+airlines |> 
+  filter(is.na(carrier))
+
 #left join is the most commonly used form of mutating join.  It is often used to add metadata to a data frame
-#what is the key here?
+#again, using <carrier> as key
 
 flights2 |>
   left_join(airlines)
+
+#left join (x,y) keeps all observations in x
+#if a row in x has more than one match in y, it will be replicated (see 19.4.1)
+
+airlines |>
+  left_join(flights2)
+
+#We could also add weather conditions to the flights dataframe
+#what key is used?
 
 flights2 |> 
   left_join(weather |> select(origin, time_hour, temp, wind_speed))
@@ -212,205 +223,10 @@ penguins_Torgerson <- read_excel("../data/penguins.xlsx",
 View(penguins_Torgerson)
 ####
 
+####Challenge 3####
+#Using your imported data and your working script, perform some sort of join that merges dataframes.  
+#If you only have a single dataframe, practice by splitting it into two or more dfs and re-merging.  
 
-####Section 1: Data Visualization with ggplot2####
-
-#different ways to visualize data set
-penguins
-glimpse(penguins)
-View(penguins)
-?penguins
-
-##creating a ggplot (see 1.2.2)
-#for folks working on the HPC, you will need to select the cairo backend at "Tools" > "Global Options" > "General" > "Graphics" > "Backend"
-
-#empty graph
-ggplot(data = penguins)
-
-#map variables to x and y axes
-ggplot(
-  data = penguins,
-  mapping = aes(x = flipper_length_mm, y = body_mass_g)
-)
-
-#add data to the plot with geoms
-ggplot(
-  data = penguins,
-  mapping = aes(x = flipper_length_mm, y = body_mass_g)
-) +
-  geom_point()
-
-#map species to color aesthetic 
-ggplot(
-  data = penguins,
-  mapping = aes(x = flipper_length_mm, y = body_mass_g, color = species)
-) +
-  geom_point()
-
-#adding a layer (smoothed line)
-ggplot(
-  data = penguins,
-  mapping = aes(x = flipper_length_mm, y = body_mass_g, color = species)
-) +
-  geom_point() + 
-  geom_smooth(method="lm")
-
-#apply the smoothed line to the entire data set, not to individual species
-ggplot(
-  data = penguins,
-  mapping = aes(x = flipper_length_mm, y = body_mass_g)
-) +
-  geom_point(mapping = aes(color = species)) +
-  geom_smooth(method = "lm")
-
-#map species to both color and shape aesthetics
-ggplot(
-  data = penguins,
-  mapping = aes(x = flipper_length_mm, y = body_mass_g)
-) +
-  geom_point(mapping = aes(color = species, shape = species)) +
-  geom_smooth(method = "lm")
-
-#Improve labeling of plot
-ggplot(
-  data = penguins,
-  mapping = aes(x = flipper_length_mm, y = body_mass_g)
-) +
-  geom_point(aes(color = species, shape = species)) +
-  geom_smooth(method = "lm") +
-  labs(
-    title = "Body mass and flipper length",
-    subtitle = "Dimensions for Adelie, Chinstrap, and Gentoo Penguins",
-    x = "Flipper length (mm)", y = "Body mass (g)",
-    color = "Species", shape = "Species"
-  ) +
-  scale_color_colorblind()
-
-##Section 1.3
-
-ggplot(
-  data = penguins,
-  mapping = aes(x = flipper_length_mm, y = body_mass_g)
-) +
-  geom_point()
-
-#more concise specification
-
-ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) + 
-  geom_point()
-
-#with a "pipe"
-
-penguins |> 
-  ggplot(aes(x = flipper_length_mm, y = body_mass_g)) + 
-  geom_point()
-
-##Section 1.4
-
-#categorical variable and a new geom
-ggplot(penguins, aes(x = species)) +
-  geom_bar()
-
-#reordered factors
-ggplot(penguins, aes(x = fct_infreq(species))) +
-  geom_bar()
-
-#numerical variable and geom_histogram
-ggplot(penguins, aes(x = body_mass_g)) +
-  geom_histogram(binwidth = 200)
-
-ggplot(penguins, aes(x = body_mass_g)) +
-  geom_histogram(binwidth = 20)
-
-ggplot(penguins, aes(x = body_mass_g)) +
-  geom_histogram(binwidth = 2000)
-
-#geom_density
-ggplot(penguins, aes(x = body_mass_g)) +
-  geom_density() 
-
-#1.4.3 exercises
-
-# 1) Make a bar plot of species of penguins, where you assign species to the y aesthetic. How is this plot different?
-#   
-# 2) How are the following two plots different? Which aesthetic, color or fill, is more useful for changing the color of bars?
-#   
-#     ggplot(penguins, aes(x = species)) +
-#       geom_bar(color = "red")
-# 
-#     ggplot(penguins, aes(x = species)) +
-#       geom_bar(fill = "red")
-# 
-# 3) What does the bins argument in geom_histogram() do?
-#   
-# 4) Make a histogram of the carat variable in the diamonds dataset that is available when you load the tidyverse package. 
-#     Experiment with different binwidths. What binwidth reveals the most interesting patterns?
-# 
-
-
-
-##Section 1.5
-
-#Relationship between numerical and categorical variable with different geoms
-ggplot(penguins, aes(x = species, y = body_mass_g)) +
-  geom_boxplot()
-
-ggplot(penguins, aes(x = species, y = body_mass_g)) +
-  geom_point()
-
-ggplot(penguins, aes(x = body_mass_g, color = species)) +
-  geom_density(linewidth = 0.75)
-
-#mapping variable species to both color and fill aesthetics
-#setting fill aesthetic to a value (0.5)
-ggplot(penguins, aes(x = body_mass_g, color = species, fill = species)) +
-  geom_density(alpha = .5)
-
-#stacked barplot
-ggplot(penguins, aes(x = island)) +
-  geom_bar()
-
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar()
-
-#using position argument to change behavior of stacked barplot
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar(position = "dodge")
-
-#getting complicated.  Three or more variables
-#basic plot
-ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
-  geom_point()
-#adding mappings for species and island
-ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
-  geom_point(aes(color = species, shape = island))
-#cleaner way to do this with faceting
-ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
-  geom_point(aes(color = species, shape = species)) +
-  facet_grid(species ~ island)
-
-
-##Challenge for 10/2##
-#Use the `diamonds` dataframe from the ggplot2 package.  
-#I want to buy a diamond (I really don't).  
-#Create a script (new file) that will do the following:
-#Make some plots that will give me an idea of what my best value is in terms of color and cut.
-#By value, if I can expect on average to buy a better cut (or color) for the same price/carat as a lesser cut (or color), that is what I am going to shop for.
-#No stats.  Make some plots.
-#GO
-View(diamonds)
-
-diamonds |>
-  ggplot(aes(x=carat, y=price, color = cut)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  facet_grid(cut~color)
-
-df <- diamonds |>
-  mutate(pricepercarat = price/carat) |>
-  ggplot(aes(x=color, y=pricepercarat)) +
-  geom_boxplot() +
-  facet_grid(~cut)
 
 
 ####Section 3: Data Transformation####
@@ -587,6 +403,108 @@ daily |>
   summarize(n = n())
 
 
+####Challenge 4####
+#using your working script, perform a data transformation and summary.  You should use mutate(), group_by(), and summarize() functions.
+#once you have this working, make it a single piped command.
+####Section 12: Summaries and Conditionals####
+
+#any() behaves as | "or" and returns TRUE if any values of x match conditions
+#all() behaves as & "and" and returns TRUE if all values of x match conditions.  
+flights |> 
+  group_by(year, month, day) |> 
+  summarize(
+    all_delayed = all(dep_delay <= 60, na.rm = TRUE),
+    any_long_delay = any(arr_delay >= 300, na.rm = TRUE)
+  )
+
+#more useful numerical conditional summaries
+#note internal use of mean() and sum()
+
+flights |> 
+  group_by(year, month, day) |> 
+  summarize(
+    proportion_delayed = mean(dep_delay <= 60, na.rm = TRUE),
+    count_long_delay = sum(arr_delay >= 300, na.rm = TRUE),
+  )
+
+#inline logical filtering with []
+
+flights |> 
+  filter(arr_delay > 0) |> 
+  group_by(year, month, day) |> 
+  summarize(
+    behind = mean(arr_delay),
+    n = n(),
+  )
+
+flights |> 
+  group_by(year, month, day) |> 
+  summarize(
+    behind = mean(arr_delay[arr_delay > 0], na.rm = TRUE),
+    ahead = mean(arr_delay[arr_delay < 0], na.rm = TRUE),
+    n = n()
+  )
+
+#note different behavior of n = n()
+
+#Conditional transformations:  if_else() and case_when()
+
+#if_else() is very similar to Excel's IF function
+
+x <- c(-3:3, NA)
+if_else(x > 0, "+ve", "-ve")
+
+if_else(x > 0, "+ve", "-ve", "???")
+
+#nested if_else of above:
+
+if_else(x == 0, "0", if_else(x < 0, "-ve", "+ve"), "???")
+
+#with multiple conditions, if_else gets hard to read.  case_when() is better
+
+x <- c(-3:3, NA)
+
+case_when(
+  x == 0   ~ "0",
+  x < 0    ~ "-ve", 
+  x > 0    ~ "+ve",
+  is.na(x) ~ "???"
+)
+
+#less explicit specification of non-matching values:
+
+case_when(
+  x < 0 ~ "-ve",
+  x > 0 ~ "+ve",
+  .default = "???"
+)
+
+#careful because conditions are evaluated sequentially.  If a value matches, it will not be examined again.
+
+case_when(
+  x > 0 ~ "+ve",
+  x > 2 ~ "big"
+)
+
+#this is when case_when is really useful: piped with mutate()
+
+flights |> 
+  mutate(
+    status = case_when(
+      is.na(arr_delay)      ~ "cancelled",
+      arr_delay < -30       ~ "very early",
+      arr_delay < -15       ~ "early",
+      abs(arr_delay) <= 15  ~ "on time",
+      arr_delay < 60        ~ "late",
+      arr_delay < Inf       ~ "very late",
+    ),
+    .keep = "used"
+  )
+
+
+
+####Challenge 5####
+#use case_when() and mutate() together to create a summary of your dataframe
 ####Section 5: Data tidying and pivoting####
 
 #table 1 is tidy
@@ -644,6 +562,167 @@ df |>
     values_from = value
   )
 
+####Challenge 6####
+#perform pivot_wide() and pivot_long() tranformations of your dataset as necessary to make it completely tidy
+####Section 1: Data Visualization with ggplot2####
+
+#different ways to visualize data set
+penguins
+glimpse(penguins)
+View(penguins)
+?penguins
+
+##creating a ggplot (see 1.2.2)
+#for folks working on the HPC, you will need to select the cairo backend at "Tools" > "Global Options" > "General" > "Graphics" > "Backend"
+
+#empty graph
+ggplot(data = penguins)
+
+#map variables to x and y axes
+ggplot(
+  data = penguins,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g)
+)
+
+#add data to the plot with geoms
+ggplot(
+  data = penguins,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) +
+  geom_point()
+
+#map species to color aesthetic 
+ggplot(
+  data = penguins,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g, color = species)
+) +
+  geom_point()
+
+#adding a layer (smoothed line)
+ggplot(
+  data = penguins,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g, color = species)
+) +
+  geom_point() + 
+  geom_smooth(method="lm")
+
+#apply the smoothed line to the entire data set, not to individual species
+ggplot(
+  data = penguins,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) +
+  geom_point(mapping = aes(color = species)) +
+  geom_smooth(method = "lm")
+
+#map species to both color and shape aesthetics
+ggplot(
+  data = penguins,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) +
+  geom_point(mapping = aes(color = species, shape = species)) +
+  geom_smooth(method = "lm")
+
+#Improve labeling of plot
+ggplot(
+  data = penguins,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) +
+  geom_point(aes(color = species, shape = species)) +
+  geom_smooth(method = "lm") +
+  labs(
+    title = "Body mass and flipper length",
+    subtitle = "Dimensions for Adelie, Chinstrap, and Gentoo Penguins",
+    x = "Flipper length (mm)", y = "Body mass (g)",
+    color = "Species", shape = "Species"
+  ) +
+  scale_color_colorblind()
+
+##Section 1.3
+
+ggplot(
+  data = penguins,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) +
+  geom_point()
+
+#more concise specification
+
+ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) + 
+  geom_point()
+
+#with a "pipe"
+
+penguins |> 
+  ggplot(aes(x = flipper_length_mm, y = body_mass_g)) + 
+  geom_point()
+
+##Section 1.4
+
+#categorical variable and a new geom
+ggplot(penguins, aes(x = species)) +
+  geom_bar()
+
+#reordered factors
+ggplot(penguins, aes(x = fct_infreq(species))) +
+  geom_bar()
+
+#numerical variable and geom_histogram
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(binwidth = 200)
+
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(binwidth = 20)
+
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(binwidth = 2000)
+
+#geom_density
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_density() 
+
+##Section 1.5
+
+#Relationship between numerical and categorical variable with different geoms
+ggplot(penguins, aes(x = species, y = body_mass_g)) +
+  geom_boxplot()
+
+ggplot(penguins, aes(x = species, y = body_mass_g)) +
+  geom_point()
+
+ggplot(penguins, aes(x = body_mass_g, color = species)) +
+  geom_density(linewidth = 0.75)
+
+#mapping variable species to both color and fill aesthetics
+#setting fill aesthetic to a value (0.5)
+ggplot(penguins, aes(x = body_mass_g, color = species, fill = species)) +
+  geom_density(alpha = .5)
+
+#stacked barplot
+ggplot(penguins, aes(x = island)) +
+  geom_bar()
+
+ggplot(penguins, aes(x = island, fill = species)) +
+  geom_bar()
+
+#using position argument to change behavior of stacked barplot
+ggplot(penguins, aes(x = island, fill = species)) +
+  geom_bar(position = "dodge")
+
+#getting complicated.  Three or more variables
+#basic plot
+ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point()
+#adding mappings for species and island
+ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point(aes(color = species, shape = island))
+#cleaner way to do this with faceting
+ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point(aes(color = species, shape = species)) +
+  facet_grid(species ~ island)
+
+
+####Challenge 7####
+#Using your tidied data, create a beautiful plot showing the relationship between a dependent (y) and independent (x) variable, and mapping at least one additional variable.  
 ####Section 15: Regular Expressions####
 
 #literal matches
@@ -769,5 +848,14 @@ df |>
 df2<- str_match(df,"<([A-Za-z]+)>-(.)_([0-9]+)")
 df2[,3]
 
-####
+#search scrabble word database
+
+words$word |>
+  str_view("")
+
+##give me a challenge...
+
+
+####Challenge 8####
+#Find all words in words$word that have three sets of double letters, e.g. bOOKKEEper or coMMiTTEE
 
